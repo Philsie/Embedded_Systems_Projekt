@@ -130,6 +130,10 @@ int main(void) {
       lcd_gotoxy(33,2);
       lcd_puts(" ");
     }
+    if(entfernung<10){
+      lcd_gotoxy(32,2);
+      lcd_puts(" ");
+    }
 
     char int_str[20];
     itoa(entfernung,int_str,10);
