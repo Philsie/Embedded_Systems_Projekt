@@ -126,6 +126,10 @@ int main(void) {
     lcd_gotoxy(0,2);
     lcd_puts_p(PSTR("Entfernung in cm: "));
     lcd_gotoxy(30,2);
+    if(entfernung<100){
+      lcd_gotoxy(33,2);
+      lcd_puts(" ");
+    }
 
     char int_str[20];
     itoa(entfernung,int_str,10);
