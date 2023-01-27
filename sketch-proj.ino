@@ -161,14 +161,6 @@ int main(void) {
       _delay_ms(50);
     }
 
-    if (entfernung > 10) {
-      PORTH |= (1 << PH0);
-      PORTA |= (1 << PA3);
-
-    } else {
-      PORTH &= ~(1 << PH0);
-      PORTA &= ~(1 << PA3);
-    }
 
     entfernung = 0;
   }
