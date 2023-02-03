@@ -106,9 +106,9 @@ int main(void) {
   DDRD &= ~(1 << PD3); // Ultra Sonic Sensor Echo as Input
   DDRH = 0xff; // LED
   DDRA = 0xff; // Motor 
-  DDRG |= (1 << DDD5); // Motor Controller PWM
+  DDRG |= (1 << DDD5); // Motor controller PWM
  
-  // Setup PWM
+  // Setup PWM for Motor controll
   TCCR0A |= (1 << WGM00) | (1 << WGM01) | (1 << COM0B1);
   TCCR0B |= (1 << CS01);
 
