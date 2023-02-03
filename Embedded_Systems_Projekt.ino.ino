@@ -29,14 +29,14 @@ void shiftInit() {
 
 // Sends a clock pulse on SH_CP line
 void shiftPulse() {
-  //Pulse the Shift Clock
+  // Pulse the Shift Clock
   HC595_PORT |= (1 << HC595_SH_CP_POS);     //HIGH
   HC595_PORT &= (~(1 << HC595_SH_CP_POS));  //LOW
 }
 
 // Sends a clock pulse on ST_CP line
 void shiftLatch() {
-  //Pulse the Store Clock
+  // Pulse the Store Clock
   HC595_PORT |= (1 << HC595_ST_CP_POS);  //HIGH
   _delay_loop_1(1);
   HC595_PORT &= (~(1 << HC595_ST_CP_POS));  //LOW
@@ -45,24 +45,24 @@ void shiftLatch() {
 
 
 void shiftWrite(uint8_t data) {
-  //Send each 8 bits serially
-  //Order is MSB first
+  // Send each 8 bits serially
+  // Order is MSB first
   for (uint8_t i = 0; i < 8; i++) {
-    //Output the data on DS line according to the
-    //Value of MSB
+    // Output the data on DS line according to the
+    // Value of MSB
     if (data & 0b10000000) {
-      //MSB is 1 so output high
+      // MSB is 1 so output high
       HC595DataHigh();
     } else {
-      //MSB is 0 so output high
+      // MSB is 0 so output high
       HC595DataLow();
     }
-    shiftPulse();      //Pulse the Clock line
-    data = data << 1;  //Now bring next bit at MSB position
+    shiftPulse();      // Pulse the Clock line
+    data = data << 1;  // Now bring next bit at MSB position
     _delay_ms(5);
   }
-  //Now all 8 bits have been transferred to shift register
-  //Move them to output latch at one
+  // Now all 8 bits have been transferred to shift register
+  // Move them to output latch at one
   shiftLatch();
 }
 // End Shift register funktions
