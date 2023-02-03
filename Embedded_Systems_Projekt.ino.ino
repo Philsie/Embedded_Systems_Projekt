@@ -1,33 +1,40 @@
+// Start Setup
+
+// Start Includes
+#include "lcd.h"
+#include <avr/io.h>
+#include <util/delay.h>
+// End Includes
+
+// Clock rate
 #define F_CPU 16000000ul;
+
+// Start Shift register Setup
 #define HC595_PORT PORTB
 #define HC595_DDR DDRB
 #define HC595_DS_POS PB0     //Data pin (DS) pin location
 #define HC595_SH_CP_POS PB1  //Shift Clock (SH_CP) pin location
 #define HC595_ST_CP_POS PB2  //Store Clock (ST_CP) pin location
 
-
-
-
-// change data (DS)lines
+// Change data (DS)lines
 #define HC595DataHigh() (HC595_PORT |= (1 << HC595_DS_POS))
 #define HC595DataLow() (HC595_PORT &= (~(1 << HC595_DS_POS)))
 
-#include "lcd.h"
-#include <avr/io.h>
-#include <util/delay.h>
-
+// Start Shift register functions 
+// Initialise Shift register
 void shiftInit() {
   //Make the Data(DS), Shift clock (SH_CP), Store Clock (ST_CP) lines output
   HC595_DDR |= ((1 << HC595_SH_CP_POS) | (1 << HC595_ST_CP_POS) | (1 << HC595_DS_POS));
 }
 
-//Sends a clock pulse on SH_CP line
+// Sends a clock pulse on SH_CP line
 void shiftPulse() {
   //Pulse the Shift Clock
   HC595_PORT |= (1 << HC595_SH_CP_POS);     //HIGH
   HC595_PORT &= (~(1 << HC595_SH_CP_POS));  //LOW
 }
-//Sends a clock pulse on ST_CP line
+
+// Sends a clock pulse on ST_CP line
 void shiftLatch() {
   //Pulse the Store Clock
   HC595_PORT |= (1 << HC595_ST_CP_POS);  //HIGH
@@ -35,6 +42,7 @@ void shiftLatch() {
   HC595_PORT &= (~(1 << HC595_ST_CP_POS));  //LOW
   _delay_loop_1(1);
 }
+
 
 void shiftWrite(uint8_t data) {
   //Send each 8 bits serially
@@ -57,20 +65,20 @@ void shiftWrite(uint8_t data) {
   //Move them to output latch at one
   shiftLatch();
 }
+// End Shift register funktions
+// End Shift register Setup
 
-void Wait() {
-  for (uint8_t i = 0; i < 50; i++) {
-    _delay_loop_2(0);
-  }
-}
-
+// variable Setup
 long entfernung;
+// End Setup
 
+// Start Main
 int main(void) {
-  Serial.begin(9600);
 
+  // Initialise Display
   lcd_init(LCD_DISP_ON);
 
+  // Array used for Bar-Chart
   uint8_t led[9] = {
     0b00000000,
     0b10000000,
@@ -82,50 +90,54 @@ int main(void) {
     0b11111110,
     0b11111111
   };
-  shiftInit();  //Initialise
+  
+  // Variables for Bar-Chart
+  uint8_t i;
+  uint8_t j;
+  
+  // Variable for Distance as String
+  char int_str[20];
+  
+  // Initialise Shift register
+  shiftInit();
 
-  // DDR als Ausgang setzen -> Ultraschallsensor (Trigger- und Echo-Pin)
-  DDRD = 0xff;
-  // DDR als Ausgang setzen -> LED
-  DDRH = 0xff;
-  // DDR als Ausgang setzen -> Motor
-  DDRA = 0xff;
-
+  // Set Data Direktion register
+  DDRD = 0xff; // Ultra Sonic Sensor
+  DDRD &= ~(1 << PD3); // Ultra Sonic Sensor Echo as Input
+  DDRH = 0xff; // LED
+  DDRA = 0xff; // Motor 
+  DDRG |= (1 << DDD5); // Motor Controller PWM
+ 
+  // Setup PWM
   TCCR0A |= (1 << WGM00) | (1 << WGM01) | (1 << COM0B1);
   TCCR0B |= (1 << CS01);
 
-  DDRG |= (1 << DDD5);
-
-  // DDR am Echo-Pin (Pin3) als Eingang setzen
-  DDRD &= ~(1 << PD3);
-  // Pull-up Widerstand am Echo-Pin einstellen
+  // Set Pull-up for Ultra Sonic Echo 
   PORTD |= (1 << PD3);
 
+  // Start Main Loop
   while (1) {
-    // ggf. Trigger manuell beenden
 
-    // Ultraschallsensor sendet Signal los -> Trigger-Pin auf HIGH
-    PORTD |= (1 << PD2);
-    // Signal vom Trigger sendet 10 Millisekunden lang
-    _delay_ms(10);
-    // Signal vom Trigger sendet nicht mehr
-    PORTD &= ~(1 << PD2);
+    // Send Ultra Sonic Pulse of 10ms
+    PORTD |= (1 << PD2); // Start sending
+    _delay_ms(10); //wait 10ms
+    PORTD &= ~(1 << PD2); // Stop sending
 
-    // warten auf eingehenden Signal beim Echo
-    while (!(PIND & (1 << PD3))) {
-      // do nothn
-    }
+    // wait for echo
+    while (!(PIND & (1 << PD3))) {/* wait */ }
 
-    // Signal kommt beim Echo an
+    // Messure Distance using Echo
     while (PIND & (1 << PD3)) {
       entfernung = entfernung + 1;
       _delay_us(58);
     }
 
-    // Distance auf Oled
+    // Display Distance on Display
+    // Write static text
     lcd_gotoxy(0,2);
     lcd_puts_p(PSTR("Entfernung in cm: "));
     lcd_gotoxy(30,2);
+    // Conditional clearing
     if(entfernung<100){
       lcd_gotoxy(33,2);
       lcd_puts(" ");
@@ -135,35 +147,33 @@ int main(void) {
       lcd_puts(" ");
     }
 
-    char int_str[20];
+    // String of Distance
     itoa(entfernung,int_str,10);
     
+    // Write Distance
     lcd_puts(int_str);
-
-    // Balken-Anzeige
-    uint8_t i;
-    uint8_t j;
-
-    // Motor PWM
-
-    if (entfernung <= 10) {
+    
+    // Controll Motor using PWM
+    if (entfernung <= 10) { // Stop
       shiftWrite(led[8]);
-      OCR0B = 0;  // Motor aus
+      OCR0B = 0;
       _delay_ms(50);
-    } else if (entfernung >= 18) {
+    } else if (entfernung >= 18) { // Full Speed
       shiftWrite(led[0]);
-      OCR0B = 255;  // Motor an
+      OCR0B = 255;  
       _delay_ms(50);
-    } else {
+    } else { // Dynamic Speed
       i = 18 - entfernung;
       shiftWrite(led[i]);
       OCR0B = ((8-i) * 255) / 8;
       _delay_ms(50);
     }
 
-
+    // Reset Distance
     entfernung = 0;
   }
+  // End Main loop
 
   return 0;
 }
+//End Main
